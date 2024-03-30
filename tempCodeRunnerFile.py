@@ -1,2 +1,2 @@
-print(myIntegrate(z, f))
-print(integrate.quad(f, -1, 1)[0])
+z = z + 1.0
+z = z /2.0
