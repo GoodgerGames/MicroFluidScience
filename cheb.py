@@ -45,7 +45,7 @@ def cheb_Coef2(f, n, a = -1.0, b=1.0):
     z = Grid(n)
     f2 = lambda x: f( a + ( (-x+1.0)/2.0 ) *(b-a) )
     y = f2(z)
-    A = np.array(dct(y))
+    A = np.array(dct(y, 1))
     inv = 1.0/(n)
     A = A*inv
     A[0] = A[0]/2.0
@@ -53,7 +53,7 @@ def cheb_Coef2(f, n, a = -1.0, b=1.0):
     return A
 
 
-def cheb_Diff(coefs, n):
+def cheb_Diff(coefs, n, a=-1.0, b=1.0):
     res = list(np.zeros(n))
     for p in range(1, n, 2):
         res[0] += p*coefs[p]
@@ -62,7 +62,7 @@ def cheb_Diff(coefs, n):
         for p in range(m+1, n, 2):
             s += p*coefs[p]
         res[m] = 2.0 * s
-    return res
+    return np.array(res) * (b-a)/2.0
 
 def cheb_DiffP(coefs, n, p):
     res = coefs
@@ -81,8 +81,12 @@ def cheb_Fx(coefs, n):
         res.append(fi)
     return np.array(res)
 
-
-
-
+def Discrepancy(f, coefs, n, a=-1.0, b=1.0):
+    def f2(x, n):
+        res = 0.0
+        for j in range(n):
+            res += cheb_T(x, j) * coefs[j]
+        return res
+    return integrate.quad(lambda x: np.abs( f(x) - f2(x, n) )**2, a, b)[0]
 
 
