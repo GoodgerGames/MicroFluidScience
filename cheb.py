@@ -89,4 +89,15 @@ def Discrepancy(f, coefs, n, a=-1.0, b=1.0):
         return res
     return integrate.quad(lambda x: np.abs( f(x) - f2(x, n) )**2, a, b)[0]
 
+def cheb_Mul(coefs1, coefs2, n):
+    res = np.zeros(n)
+    for i in range(1, n):
+        res[0] += 0.5 * coefs1[i]*coefs2[i]
+    res[0] += coefs1[0]*coefs2[0]
 
+    for i in range(1, n):
+        for j in range(i, n):
+            res[i] += 0.5*( coefs1[j] * coefs2[j-i] + coefs2[j]*coefs1[j-i] )
+        for j in range(i):
+            res[i] += 0.5 * coefs1[j] * coefs2[i-j]
+    return res

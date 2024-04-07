@@ -8,15 +8,25 @@ from plotly.subplots import make_subplots
 N = 512
 Nu = 1e-4
 
-a, b = 0.0, 1.0
+a, b = -1.0, 1.0
 
 def f(x):
-    return 1.0-np.exp( -x/Nu ) + np.exp( (x-1.0)/Nu )
+    #return 1.0-np.exp( -x/Nu ) + np.exp( (x-1.0)/Nu )
+    return x**3
+
+def f1(x):
+    return x**2
+
+def f2(x):
+    return x
 
 x = GridAB(N, a, b)
 y = f(x)
 
-f_coefs = cheb_Coef2(f, N, a, b)
+f1_coefs = cheb_Coef2(f1, N, a, b)
+f2_coefs = cheb_Coef2(f2, N, a, b)
+
+f_coefs = cheb_Mul(f1_coefs, f2_coefs, N)
 yc = cheb_Fx(f_coefs, N)
 
 df_coefs = cheb_Diff(f_coefs, N, a, b)
