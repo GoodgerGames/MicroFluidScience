@@ -101,3 +101,29 @@ def cheb_Mul(coefs1, coefs2, n):
         for j in range(i):
             res[i] += 0.5 * coefs1[j] * coefs2[i-j]
     return res
+
+def cheb_Int(coefs, n):
+    res = np.zeros(n)
+    for i in range(2, n-1):
+        res[i] = 0.5 * (coefs[i-1]-coefs[i+1])/(i)
+    res[n-1] = 0.5 * coefs[n-2]/(n-1.0)
+    res[1] = coefs[0]-0.5*coefs[2]
+    res[0] = 0.0
+
+    p1 = 0.0
+    for j in range(n):
+        p1 += cheb_T(-1.0, j) * res[j]
+
+    p2 = 0.0
+    for j in range(n):
+        p2 += cheb_T(1.0, j) * res[j]
+
+    return res, p1, p2, p2-p1
+
+
+
+'''def f1(x):
+    return x*x/2.0'''
+
+#print(integrate.quad(f1, -1, 1)[0])
+#print(cheb_Int(cheb_Coef2(f1, 512, -1, 1), 512)[-1])
