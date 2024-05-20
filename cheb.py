@@ -4,6 +4,9 @@ import scipy.integrate as integrate
 from scipy.fft import dct
 from myIntegrate import *
 
+cheb_to_phys = 0
+phys_to_cheb = 0
+
 EPS = 1e-8
 
 def Grid(n):
@@ -23,9 +26,14 @@ def cheb_T(x, n):
     return mth.cos(n* mth.acos(x))
 
 def cheb_W(x):
-    if x*x != 1.0 :
-        return 1.0/mth.sqrt(1.0-x*x)
-    else: return 0.0
+    if x**2 != 1.0 :
+        return 1.0/np.sqrt(1.0-x*x)
+    else:
+        return 0.0
+
+def cheb_W2(x):
+    return 1.0/np.sqrt(1.0-x*x)
+
 
 def cheb_N(n):
     if n == 0:
@@ -34,26 +42,54 @@ def cheb_N(n):
         return mth.pi/2.0
 
 def cheb_Coef(f, n, a=-1.0, b=1.0, eps = EPS):
+
+    global phys_to_cheb
+
     A = []
     for i in range(n):
         Ai = integrate.quad(lambda x: cheb_W(x)*  f( a + ( (x+1.0)/2.0 ) *(b-a) )  *cheb_T(x, i), -1, 1, epsabs=eps)[0]
         if abs(Ai) < eps: Ai = 0.0
         A.append(Ai/cheb_N(i))
+
+    phys_to_cheb += 1
+
     return A
 
 def cheb_Coef2(f, n, a = -1.0, b=1.0):
+
+    global phys_to_cheb
+
     z = Grid(n)
     f2 = lambda x: f( a + ( (-x+1.0)/2.0 ) *(b-a) )
-    y = f2(z)
+    y = np.zeros(n)
+    for i in range(n):
+        y[i] = f2(z[i])
     A = np.array(dct(y, 1))
-    inv = 1.0/(n)
+    inv = 1.0/(n-1)
     A = A*inv
     A[0] = A[0]/2.0
     A[-1] = A[-1]/2.0
+
+    phys_to_cheb += 1
+
+    return A
+
+def cheb_Coef3(fx, n, a=-1.0, b=1.0):
+
+    global phys_to_cheb
+
+    A = np.array(dct(fx, 1))
+    inv = 1.0/(n-1)
+    A = A*inv
+    A[0] = A[0]/2.0
+    A[-1] = A[-1]/2.0
+
+    phys_to_cheb += 1
+
     return A
 
 
-def cheb_Diff(coefs, n, a=-1.0, b=1.0):
+def cheb_Diff(coefs, n):
     res = list(np.zeros(n))
     for p in range(1, n, 2):
         res[0] += p*coefs[p]
@@ -61,8 +97,8 @@ def cheb_Diff(coefs, n, a=-1.0, b=1.0):
         s = 0.0
         for p in range(m+1, n, 2):
             s += p*coefs[p]
-        res[m] = 2.0 * s
-    return np.array(res) * (b-a)/2.0
+        res[m] = 2.0*s
+    return np.array(res)
 
 def cheb_DiffP(coefs, n, p):
     res = coefs
@@ -71,14 +107,20 @@ def cheb_DiffP(coefs, n, p):
     return res
 
 def cheb_Fx(coefs, n):
+
+    global cheb_to_phys
+
     res = []
     z = Grid(n)
     #print(z)
-    for i in range(n):
+    for y in z:
         fi = 0.0
         for j in range(n):
-            fi += cheb_T(z[i], j) * coefs[j]
+            fi += cheb_T(y, j) * coefs[j]
         res.append(fi)
+
+    cheb_to_phys += 1
+
     return np.array(res)
 
 def Discrepancy(f, coefs, n, a=-1.0, b=1.0):
@@ -102,6 +144,12 @@ def cheb_Mul(coefs1, coefs2, n):
             res[i] += 0.5 * coefs1[j] * coefs2[i-j]
     return res
 
+def cheb_Val(coefs, n, p):
+    p1 = 0.0
+    for j in range(n):
+        p1 += cheb_T(p, j) * coefs[j]
+    return p1
+
 def cheb_Int(coefs, n):
     res = np.zeros(n)
     for i in range(2, n-1):
@@ -110,20 +158,20 @@ def cheb_Int(coefs, n):
     res[1] = coefs[0]-0.5*coefs[2]
     res[0] = 0.0
 
-    p1 = 0.0
-    for j in range(n):
-        p1 += cheb_T(-1.0, j) * res[j]
+    #res *= 4.0
 
-    p2 = 0.0
-    for j in range(n):
-        p2 += cheb_T(1.0, j) * res[j]
+    #print(res)
+    values = cheb_Fx(res, n)
+    p1 = values[0]
+    p2 = values[n-1]
 
+    #print(p1, p2)
     return res, p1, p2, p2-p1
 
 
 
 '''def f1(x):
-    return x*x/2.0'''
+    return x*x/2.0
 
-#print(integrate.quad(f1, -1, 1)[0])
-#print(cheb_Int(cheb_Coef2(f1, 512, -1, 1), 512)[-1])
+print(integrate.quad(f1, -1, 1)[0])
+print(cheb_Int(cheb_Coef2(f1, 512), 512)[-1])'''

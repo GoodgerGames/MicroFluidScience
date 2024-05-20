@@ -1,0 +1,187 @@
+def Canalitic(x, y, n=N):
+    res = 0.0
+    for i in range(n):
+        res += C0 * np.cos( np.pi / 2.0 * (1.0+2.0*i) * y ) * np.exp( - np.pi**2 / 2.0 / Q * (1.0+2.0*i) * x )
+    return res
+
+
+if __name__ == '__main__':
+    print("Start preparing...")
+
+    res = range(N)
+
+    with ProcessPoolExecutor() as executor:
+        executor.map(process_row, res)
+
+    print("main coefs ready!")
+    res = np.array(res)
+    #print(res)
+
+    res_n1 = []
+    for i in range(N):
+        Ti = np.zeros(N)
+        Ti[i] = 1.0
+        dTi = cheb_Diff(Ti, N)
+        res_n1.append( cheb_Fx(dTi, N)[0] )
+    res_n1 = np.array(res_n1)
+
+    print("n-1 coefs ready!")
+
+    res_n2 = []
+    for i in range(N):
+        Ti = np.zeros(N)
+        Ti[i] = 1.0
+        dTi = cheb_Diff(Ti, N)
+        res_n2.append( cheb_Fx(dTi, N)[N-1] )
+    res_n2 = np.array(res_n2)
+
+    print("n-2 coefs ready!")
+    #print(res_n1)
+    #print(res_n2)
+
+    print("Preparation ended")
+
+    z_grid = Grid(N)
+    C = np.zeros(N)
+
+    Carray = []
+    Cx = np.zeros(N)
+
+    x_grid = [0.0]
+
+    A = []
+    for y in z_grid:
+        #print(y)
+        CkCoefs = []
+        for i in range(N):
+            CkCoefs.append( cheb_T(y, i) )
+        A.append(CkCoefs)
+        '''if abs(y) <= EPS:
+            Cx.append(C0)
+        else:
+            Cx.append(0.0)'''
+
+    Cx[mth.ceil(N/2.0)] = C0
+    Cx[mth.ceil(N/2.0)-1] = C0
+
+    Carray.append(Cx)
+
+    C = np.linalg.solve(A, Cx)
+
+
+    CoefsArray = []
+    CoefsArray.append(C)
+    '''
+    for i in range(Steps):
+        C_new = np.zeros(N)
+        for j in range(N-2):
+            k1 = np.sum(np.dot(CoefsArray[-1], res[j]))
+            k2 = np.sum(np.dot(CoefsArray[-1] + delta_x/2.0 * k1, res[j]))
+            k3 = np.sum(np.dot(CoefsArray[-1] + delta_x/2.0 * k2, res[j]))
+            k4 = np.sum(np.dot(CoefsArray[-1] + delta_x * k3, res[j]))
+            #print(k1, k2, k3, k4)
+            C_new[j] = CoefsArray[-1][j] + delta_x/6.0 * (k1 + 2.0*k2 + 2.0*k3 + k4)
+
+        A = [res_n1[N-2:N], res_n2[N-2:N]]
+        B = [-np.dot(res_n1[:N-2], C_new[:N-2]), -np.dot(res_n2[:N-2], C_new[:N-2] )]
+        S = np.linalg.solve(A, B)
+        #print(S)
+        C_new[N-2] = S[0]
+        C_new[N-1] = S[1]
+        C = C_new.copy()
+        CoefsArray.append(C_new)
+        x_grid.append(x_grid[-1]+delta_x)
+        Carray.append(cheb_Fx(C, N))'''
+
+    #Eulers method for init
+    Cx = []
+    C_new = np.zeros(N)
+    for k in range(N-2):
+        C_new[k] = CoefsArray[-1][k] + delta_x * ( np.sum(np.dot( res[k], C )) )
+
+    A = [res_n1[N-2:N], res_n2[N-2:N]]
+    #print(A)
+    B = [-np.dot(res_n1[:N-2], C_new[:N-2]), -np.dot(res_n2[:N-2], C_new[:N-2] )]
+    print(B)
+    S = np.linalg.solve(A, B)
+    C_new[N-2] = S[0]
+    C_new[N-1] = S[1]
+    C = C_new.copy()
+    CoefsArray.append(C_new)
+    x_grid.append(x_grid[-1]+delta_x)
+    Carray.append(cheb_Fx(CoefsArray[-1], N))
+    #Eulers finished
+
+    #Step 2 start
+    Cx = []
+    C_new = np.zeros(N)
+    for k in range(N-2):
+        C_new[k] = CoefsArray[-1][k] + delta_x * (3.0/2.0 * np.sum(np.dot( res[k], CoefsArray[-1] )) - 1.0/2.0 * np.sum(np.dot( res[k], CoefsArray[-2] )))
+
+    A = [res_n1[N-2:N], res_n2[N-2:N]]
+    B = [-np.dot(res_n1[:N-2], C_new[:N-2]), -np.dot(res_n2[:N-2], C_new[:N-2] )]
+    S = np.linalg.solve(A, B)
+    C_new[N-2] = S[0]
+    C_new[N-1] = S[1]
+
+    C = C_new.copy()
+    CoefsArray.append(C_new)
+    x_grid.append(x_grid[-1]+delta_x)
+    Carray.append(cheb_Fx(CoefsArray[-1], N))
+    #Step 2 finished
+
+    #Step 3 start
+    Cx = []
+    C_new = np.zeros(N)
+    for k in range(N-2):
+        C_new[k] = CoefsArray[-1][k] + delta_x * ( 23.0/12.0 * np.sum(np.dot( res[k], CoefsArray[-1] )) -  16.0/12.0 * np.sum(np.dot( res[k], CoefsArray[-2])) + 5.0/12.0 * np.sum(np.dot( res[k], CoefsArray[-3] )))
+
+    A = [res_n1[N-2:N], res_n2[N-2:N]]
+    B = [-np.dot(res_n1[:N-2], C_new[:N-2]), -np.dot(res_n2[:N-2], C_new[:N-2] )]
+    S = np.linalg.solve(A, B)
+    C_new[N-2] = S[0]
+    C_new[N-1] = S[1]
+
+    C = C_new.copy()
+    CoefsArray.append(C_new)
+    x_grid.append(x_grid[-1]+delta_x)
+    Carray.append(cheb_Fx(CoefsArray[-1], N))
+    #Step 3 finished
+
+    #Iterative step started
+    for i in range(Steps):
+        Cx = []
+        C_new = np.zeros(N)
+        for k in range(N-2):
+            C_new[k] = CoefsArray[-1][k] + delta_x * ( 55.0/24.0 * np.sum(np.dot( res[k], CoefsArray[-1] )) -  59.0/24.0 * np.sum(np.dot( res[k], CoefsArray[-2])) + 37.0/24.0 * np.sum(np.dot( res[k], CoefsArray[-3] )) - 9.0/24.0 * np.sum(np.dot( res[k], CoefsArray[-4] )))
+
+        A = [res_n1[N-2:N], res_n2[N-2:N]]
+        B = [-np.dot(res_n1[:N-2], C_new[:N-2]), -np.dot(res_n2[:N-2], C_new[:N-2] )]
+        S = np.linalg.solve(A, B)
+        C_new[N-2] = S[0]
+        C_new[N-1] = S[1]
+
+        C = C_new.copy()
+        CoefsArray.append(C_new)
+        x_grid.append(x_grid[-1]+delta_x)
+        Carray.append(cheb_Fx(CoefsArray[-1], N))
+    x_grid.append(x_grid[-1]+delta_x)
+
+    #print(Carray)
+    Carray = np.matrix(Carray)
+    #print(Carray)
+
+    CarrayAn = []
+    for x in x_grid:
+        caaline = []
+        for y in z_grid:
+            caaline.append(Canalitic(x, y))
+        CarrayAn.append(caaline)
+    CarrayAn = np.matrix(CarrayAn)
+
+    print(x_grid)
+    '''fig = go.Figure(data=go.Heatmap(
+                    z=Carray.T,
+                    x=x_grid,
+                    y=z_grid,
+                    hoverongaps = False))'''
