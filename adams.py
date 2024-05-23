@@ -12,19 +12,29 @@ def adams_bashforth(f, y0, steps, delta_x):
 
     # Начальный шаг методом Рунге-Кутты 4-го порядка
     for i in range(3):
-        #print(i)
+        print('STEP NUMBER', i)
         y = np.zeros(n)
+        #print(f(x_array[i], y_array[i]))
+        print("k1")
         k1 = delta_x * f(x_array[i], y_array[i])
-        k2 = delta_x * f(x_array[i] + delta_x / 2, y_array[i] + k1 / 2 )
-        k3 = delta_x * f(x_array[i] + delta_x / 2, y_array[i] + k2 / 2 )
+        #print("k1=", k1)
+        print("k2")
+        k2 = delta_x * f(x_array[i] + delta_x / 2.0, y_array[i] + k1 / 2.0 )
+        #print(k2)
+        print("k3")
+        k3 = delta_x * f(x_array[i] + delta_x / 2.0, y_array[i] + k2 / 2.0 )
+        #print(k3)
+        print("k4")
         k4 = delta_x * f(x_array[i] + delta_x, y_array[i] + k3 )
-        y = y_array[i] + (k1 + 2 * k2 + 2 * k3 + k4) / 6
+        #print(k4)
+        y = y_array[i] + (k1 + 2.0 * k2 + 2.0 * k3 + k4) / 6.0
         y_array.append(y)
+        #print(y)
         x_array.append(x_array[i] + delta_x)
 
     # Шаги методом Адамса-Башфорта
     for i in range(3, steps):
-        #print(i)
+        print('STEP NUMBER', i)
         y = np.zeros(n)
         y = y_array[i] + delta_x * (55 * f(x_array[i], y_array[i]) - 59 * f(x_array[i-1], y_array[i-1]) + 37 * f(x_array[i-2], y_array[i-2]) - 9 * f(x_array[i-3], y_array[i-3])) / 24
         y_array.append(y)

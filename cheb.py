@@ -82,7 +82,7 @@ def cheb_Coef3(fx, n, a=-1.0, b=1.0):
     inv = 1.0/(n-1)
     A = A*inv
     A[0] = A[0]/2.0
-    A[-1] = A[-1]/2.0
+    A[n-1] = A[n-1]/2.0
 
     phys_to_cheb += 1
 
@@ -110,7 +110,19 @@ def cheb_Fx(coefs, n):
 
     global cheb_to_phys
 
-    res = []
+    t = coefs[0]
+    coefs[0] = coefs[0]*2.0
+    coefs[n-1] = coefs[n-1]*2.0
+
+    res = np.array(dct(coefs, 1))
+    res *= 0.5
+
+    coefs[0] = t
+    coefs[n-1] = coefs[n-1] * 0.5
+
+    res[:] = res[::-1]
+
+    '''res = []
     z = Grid(n)
     #print(z)
     for y in z:
@@ -119,7 +131,7 @@ def cheb_Fx(coefs, n):
             fi += cheb_T(y, j) * coefs[j]
         res.append(fi)
 
-    cheb_to_phys += 1
+    cheb_to_phys += 1'''
 
     return np.array(res)
 
