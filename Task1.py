@@ -32,7 +32,7 @@ R0 = np.zeros(N1)
 NU = 1e-3
 P = 1.0
 ZA = 2.0
-A_DA = 1.0
+A_DA = 0.2
 CA0 = 1e-3
 DELTA_V = 7.0
 V0 = 5.0
@@ -72,8 +72,8 @@ def mkdir_p(mypath):
             pass
         else: raise
 
-def FCN(t, XX, YP = [], ca = ca):
-    print(t)
+def FCN(t, XX):
+    #print(t)
 
     global y
     m = 2.0/L
@@ -87,8 +87,8 @@ def FCN(t, XX, YP = [], ca = ca):
     CaF = np.concatenate([XX[2*N:], [0.0, 0.0]])
     Ca = cheb_Fx(CaF, N1)
 
-    #s = -0.25 * L * L / (EPS * EPS)
-    rp = -(rF-ZA*CaF)/NU/NU
+    s = -0.25 * L * L / (EPS * EPS)
+    rp = s*(rF-ZA*CaF)
 
     EF = cheb_Int(rp, N1)[0]
     FF = cheb_Int(EF, N1)[0]
@@ -99,14 +99,8 @@ def FCN(t, XX, YP = [], ca = ca):
         k1 = k1 + FF[i] * (-1.0)**(i*1.0)
         k2 = k2 + FF[i]
 
-    #print(k1, k2)
-
     FF[0] = -0.5 * (k1+k2-DELTA_V)
     FF[1] = 0.5 * (k1-k2+DELTA_V)
-
-    #print(FF[0], FF[1])
-
-    #print(cheb_Fx(FF, N1))
 
     EF = cheb_Diff(FF, N1)
 
@@ -209,6 +203,11 @@ def FCN(t, XX, YP = [], ca = ca):
     Ca = cheb_Fx(CaF, N1)
     EE = cheb_Fx(EF, N1)
 
+    #plt.plot(y, F)
+    #plt.plot(y, Ca)
+    #plt.show()
+    #plt.close()
+
     s1 = r*EE
     s2 = K*EE
     s3 = -Ca*EE * ZA
@@ -261,16 +260,6 @@ if __name__ == '__main__':
     print("Adams...")
     t_grid = np.linspace(0.0, delta_t*Steps, Steps)
 
-    #methods: 'LSODA', 'RK45', 'BDF'
-    '''num_sol = solve_ivp(
-        FCN,
-        [0.0, delta_t*Steps],
-        yF,
-        method='BDF',
-        dense_output=True
-        )
-    CoefsArray = num_sol.sol(t_grid).T'''
-
     my_path = os.path.abspath(__file__)
     Karray = []
     Rarray = []
@@ -279,13 +268,15 @@ if __name__ == '__main__':
 
     Karray.append(cheb_Fx(np.concatenate((CoefsArray[-1][:N], [0.0, 0.0])), N1))
     Rarray.append(cheb_Fx(np.concatenate((CoefsArray[-1][N:N+N], [0.0, 0.0])), N1))
-    Carray.append(cheb_Fx(np.concatenate((CoefsArray[-1][N+N:N+N+N], [0.0, 0.0])), N1))
+    Carray.append(cheb_Fx(np.concatenate((CoefsArray[-1][N+N:], [0.0, 0.0])), N1))
 
     #Karray.append(cheb_Fx(CoefsArray[-1][:N], N1))
     #Rarray.append(cheb_Fx(CoefsArray[-1][N:N+N], N1))
     #Carray.append(cheb_Fx(CoefsArray[-1][N+N:N+N+N], N1))
 
-    plt.subplot(1, 2, 1)
+    plt.figure(figsize=(18, 6), dpi=80)
+
+    plt.subplot(1, 3, 1)
 
     ca_plot = plt.plot(y, Carray[-1], label="Ca", alpha=0.8, linewidth=2.5, color='black')
     cplus_plot = plt.plot(y, (Karray[-1]+Rarray[-1])/2.0, label="C+", alpha=0.8, linewidth=2.5, color='red')
@@ -295,7 +286,7 @@ if __name__ == '__main__':
     plt.ylim(0.0, 3.0)
     plt.tight_layout()
 
-    plt.subplot(1, 2, 2)
+    plt.subplot(1, 3, 2)
 
     ca_plot2 = plt.plot(y, Carray[-1], label="Ca", alpha=0.8, linewidth=2.5, color='black')
     r_plot = plt.plot(y, Rarray[-1], label="rho", alpha=0.8, linewidth=2.5, color='green')
@@ -306,7 +297,33 @@ if __name__ == '__main__':
     plt.ylim(0.0, 3.0)
     plt.tight_layout()
 
+    plt.subplot(1, 3, 3)
+
+    s = -0.25 * L * L / (EPS * EPS)
+    rp = s*(Rarray[-1]-ZA*Carray[-1])
+
+    EF = cheb_Int(rp, N1)[0]
+    FF = cheb_Int(EF, N1)[0]
+
+    k1 = 0.0
+    k2 = 0.0
+    for i in range(2, N1):
+        k1 = k1 + FF[i] * (-1.0)**(i*1.0)
+        k2 = k2 + FF[i]
+
+    FF[0] = -0.5 * (k1+k2-DELTA_V)
+    FF[1] = 0.5 * (k1-k2+DELTA_V)
+
+    F = cheb_Fx(FF, N1)
+
+    f_plot = plt.plot(y, F, label="F", alpha=0.8, linewidth=2.5, color='orange')
+
+    plt.legend()
+    plt.tight_layout()
+
+
     dir = 'deltaV__'+str(DELTA_V).replace('.', '_')+'__V0__'+str(V0).replace('.', '_')+'__ZA__'+str(ZA).replace('.', '_')+'__ALPHA__'+str(A_DA).replace('.', '_')
+    print(dir)
     mkdir_p(dir)
     plt.savefig(dir+'/t'+str(0).replace('.', '_')+'.png')
     plt.close()
@@ -319,14 +336,15 @@ if __name__ == '__main__':
 
         Karray.append(cheb_Fx(np.concatenate((CoefsArray[-1][:N], [0.0, 0.0])), N1))
         Rarray.append(cheb_Fx(np.concatenate((CoefsArray[-1][N:N+N], [0.0, 0.0])), N1))
-        Carray.append(cheb_Fx(np.concatenate((CoefsArray[-1][N+N:N+N+N], [0.0, 0.0])), N1))
+        Carray.append(cheb_Fx(np.concatenate((CoefsArray[-1][N+N:], [0.0, 0.0])), N1))
 
         #Karray.append(cheb_Fx(CoefsArray[-1][:N], N1))
         #Rarray.append(cheb_Fx(CoefsArray[-1][N:N+N], N1))
         #Carray.append(cheb_Fx(CoefsArray[-1][N+N:N+N+N], N1))
 
         if i%STP == 0:
-            plt.subplot(1, 2, 1)
+            plt.figure(figsize=(18, 6), dpi=80)
+            plt.subplot(1, 3, 1)
 
             ca_plot = plt.plot(y, Carray[-1], label="Ca", alpha=0.8, linewidth=2.5, color='black')
             cplus_plot = plt.plot(y, (Karray[-1]+Rarray[-1])/2.0, label="C+", alpha=0.8, linewidth=2.5, color='red')
@@ -335,7 +353,7 @@ if __name__ == '__main__':
             plt.ylim(0.0, 3.0)
             plt.tight_layout()
 
-            plt.subplot(1, 2, 2)
+            plt.subplot(1, 3, 2)
 
             ca_plot2 = plt.plot(y, Carray[-1], label="Ca", alpha=0.8, linewidth=2.5, color='black')
             r_plot = plt.plot(y, Rarray[-1], label="rho", alpha=0.8, linewidth=2.5, color='green')
@@ -344,6 +362,30 @@ if __name__ == '__main__':
             plt.suptitle("t = " + str((i+1)*delta_t))
             plt.legend()
             plt.ylim(0.0, 3.0)
+            plt.tight_layout()
+
+            plt.subplot(1, 3, 3)
+
+            s = -0.25 * L * L / (EPS * EPS)
+            rp = s*(Rarray[-1]-ZA*Carray[-1])
+
+            EF = cheb_Int(rp, N1)[0]
+            FF = cheb_Int(EF, N1)[0]
+
+            k1 = 0.0
+            k2 = 0.0
+            for j in range(2, N1):
+                k1 = k1 + FF[j] * (-1.0)**(j*1.0)
+                k2 = k2 + FF[j]
+
+            FF[0] = -0.5 * (k1+k2-DELTA_V)
+            FF[1] = 0.5 * (k1-k2+DELTA_V)
+
+            F = cheb_Fx(FF, N1)
+
+            f_plot = plt.plot(y, F, label="F", alpha=0.8, linewidth=2.5, color='orange')
+
+            plt.legend()
             plt.tight_layout()
 
             plt.savefig(dir+'/t'+str(i+1).replace('.', '_')+'.png')
